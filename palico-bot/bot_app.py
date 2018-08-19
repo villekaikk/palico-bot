@@ -20,6 +20,7 @@ Client = discord.Client()
 bot = commands.Bot(command_prefix="!",
                    description="Monster Hunter World database bot")
 
+
 abbrevations = {"gs": "greatsword",
                 "ls": "longsword",
                 "gl": "gunlance",
@@ -35,8 +36,10 @@ abbrevations = {"gs": "greatsword",
                 "hh": "hunting-horn",
                 "sa": "switch-axe",
                 "set": "set",
-                "low-rank": "lr",
-                "high-rank": "hr"}
+                "lr": "low",
+                "hr": "high",
+                "low-rank": "low",
+                "high-rank": "high"}
 
 
 @bot.event
@@ -49,9 +52,9 @@ async def get(ctx):
     """
     Tries to fetch the queried item(s) from the database.
     Input format:
-        args[1]: item or set name
-        args[2]: item type or "set"
-        args[3]: lr / hr (optional)
+        args[0]: item or set name
+        args[1]: item type or "set"
+        args[2]: lr / hr (optional)
 
     Args:
         ctx (discord.Context): Discord Context object.
@@ -63,9 +66,18 @@ async def get(ctx):
     """
     
     args = ctx.message.content.split(" ")[1:]  # Don't get the !get
-    await bot.say("Args given: {}".format(args))
-    print("this should still run")
 
+    thing = args[0]
+    thing_type = args[1].lower()
+    rank = args[2].lower() if len(args) > 2 else None
+
+    # Get the actual rank parameter
+    if rank:
+        rank = abbrevations[rank] if rank in abbrevations else rank
+
+    #print("Querying: {} {} with {}".format(thing, thing_type, rank))
+    dh = DataHandler.get_handler()
+    await dh.get_thing(thing, thing_type, rank)
 
 @bot.command(pass_context=True)
 async def pepperoni(ctx):
@@ -117,7 +129,7 @@ def init_palico():
     config = load_config()
     init_dirs(config)
 
-    dh = DataHandler(config["resource_path"])
+    dh = DataHandler(config["resource_path"], bot)
     dh.prepare_data()
 
     bot.run(config.get("bot_token", None))

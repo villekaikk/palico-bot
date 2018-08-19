@@ -1,3 +1,4 @@
+import asyncio
 import json
 import os
 
@@ -5,13 +6,45 @@ import Weblib
 
 weblib = Weblib.Weblib()
 
+armor_pieces = ["head", "waist", "chest", "legs", "gloves"]
 
 class DataHandler:
 
-    def __init__(self, resource_path):
+    _handler = None
 
-        self._resources = ["armor", "weapons", "charms"]
+    """
+    Handles the data parsing and queries for the bot.
+    """
+
+    def __init__(self, resource_path, bot):
+        """
+        Constructor.
+
+        Args:
+            resource_path (str): path to the resource directory.
+            bot (discord.commands.Bot): reference to the bot object.
+
+        Returns:
+            Nothing
+
+        """
+
+        self._resources = ["armor", "weapons", "charms", "skills"]
         self._res_path = resource_path
+        self._bot = bot
+
+        self._armors = None
+        self._weapons = None
+        self._charms = None
+        self._skills = None
+        DataHandler._handler = self
+
+    @staticmethod
+    def get_handler():
+        if DataHandler._handler:
+            return DataHandler._handler
+        else:
+            raise Exception("DataHandler not existing!")
 
     def prepare_data(self):
         """
@@ -20,7 +53,15 @@ class DataHandler:
         self._get_database()
         self._parse_armors()
 
+    async def get_thing(self, thing, thing_type, rank):
+        if thing_type == "set":
+            await self.get_armor_set_info(thing, rank)
+            return
 
+        if thing_type in armor_pieces:
+            pass
+
+        return
 
     def should_get_data(self):
         """
@@ -40,7 +81,6 @@ class DataHandler:
             print("No need to fetch {}".format(r))
         
         return False
-
 
     def get_resource(self, resource: str):
         """
@@ -62,7 +102,6 @@ class DataHandler:
         with open("{}.json".format(save_path), "w") as res_file:
             json.dump(res_json, res_file, indent=4)
 
-
     def _get_database(self):
         """
         Fetches the MHW database over REST API and saves it locally for easier
@@ -79,6 +118,42 @@ class DataHandler:
 
         return
 
+    async def get_armor_set_info(self, set_name, rank=None):
+        """
+        Fetches the armor set information from the database.
+
+        Args:
+            set_name (str): name of the armor set to be queried.
+            rank (str): high-rank or low-rank. Optional. If not given, both
+                sets are returned.
+
+        Returns:
+            Dictionary containing the set information
+
+        """
+
+        set_name = set_name.lower()
+
+        results = {}
+        for set_key in self._armors.keys():
+            # If rank not give, get add bish
+            a_set = self._armors[set_key]
+            if set_name in set_key.lower() and (rank == a_set["rank"] or rank is None):
+                pieces = [a_set[piece]["name"] for piece in armor_pieces]
+
+                results[set_key] = {"defense": a_set["defense"],
+                                    "resistances": a_set["resistances"],
+                                    "skills": a_set["skills"],
+                                    "rank": a_set["rank"],
+                                    "pieces": pieces
+                                    }
+
+        if not results:
+            await self._bot.say("No results!")
+            return
+
+        await self._bot.say(results)
+        return
 
     def _parse_armors(self):
         """
@@ -87,12 +162,20 @@ class DataHandler:
 
         Returns:
             Nothing
+
         """
 
         raw_armor_path = os.path.join(self._res_path, "raw_armor.json")
         if not os.path.exists(raw_armor_path):
             raise FileNotFoundError(
                 "{} does not exist yet!".format(raw_armor_path))
+
+        out_file = os.path.join(self._res_path, "parsed_armor.json")
+        # If parsed_armor.json exists, load it and return
+        if os.path.exists(out_file):
+            with open(out_file, "r") as json_out:
+                self._armors = json.load(json_out)
+                return
 
         with open(raw_armor_path, "r") as armor_file:
             armors = json.load(armor_file)
@@ -147,6 +230,7 @@ class DataHandler:
             set_obj[a["type"]] = new_piece
 
             # Update the set totals
+            # TODO: Add slots to the set totals
             for d in set_obj["defense"]:
                 set_obj["defense"][d] += new_piece["defense"][d]
 
@@ -162,11 +246,9 @@ class DataHandler:
                     set_obj["materials"][mn] = {"quantity": mq}
 
         # Write the parsed data to the file
-        file_name = "parsed_armor.json"
-        with open(os.path.join(self._res_path, file_name), "w") as f:
+        with open(out_file, "w") as f:
             json.dump(final_result, f, indent=4)
 
+        self._armors = final_result
+
         return
-
-
-        
