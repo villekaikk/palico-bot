@@ -2,3 +2,4 @@
 venv
 .vscode
 palico-bot/config/config.json
+palico-bot/resources/*
