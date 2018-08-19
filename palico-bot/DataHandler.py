@@ -1,4 +1,5 @@
 import asyncio
+import discord
 import json
 import os
 
@@ -7,6 +8,11 @@ import Weblib
 weblib = Weblib.Weblib()
 
 armor_pieces = ["head", "waist", "chest", "legs", "gloves"]
+
+weapons = ["greatsword", "longsword", "gunlance", "heavy-bowgun",
+           "light-bowgun", "lance", "sword-and-shield",
+           "charge-blade", "bow", "insect-glaive", "hammer",
+           "dual-blades", "hunting-horn", "switch-axe"]
 
 class DataHandler:
 
@@ -59,6 +65,9 @@ class DataHandler:
             return
 
         if thing_type in armor_pieces:
+            pass
+
+        if thing_type in weapons:
             pass
 
         return
@@ -152,7 +161,19 @@ class DataHandler:
             await self._bot.say("No results!")
             return
 
-        await self._bot.say(results)
+        for r in results:
+            emb = discord.Embed(title=r,
+                                description="{} rank set".format(results[r]["rank"].capitalize()))
+            emb.add_field(name="Set pieces",
+                          value="\n".join(results[r]["pieces"]))
+            defs = list(str(value) for value in results[r]["defense"].values())
+            emb.add_field(
+                name="Defense",
+                value="Base: {}\nMax: {}\nAugmented: {}".format(defs[0],
+                                                                defs[1],
+                                                                defs[2]))
+
+            await self._bot.say(embed=emb)
         return
 
     def _parse_armors(self):

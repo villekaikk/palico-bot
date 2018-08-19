@@ -35,11 +35,12 @@ abbrevations = {"gs": "greatsword",
                 "db": "dual-blades",
                 "hh": "hunting-horn",
                 "sa": "switch-axe",
-                "set": "set",
-                "lr": "low",
-                "hr": "high",
-                "low-rank": "low",
-                "high-rank": "high"}
+                "set": "set"}
+
+ranks = {"lr": "low",
+         "hr": "high",
+         "low-rank": "low",
+         "high-rank": "high"}
 
 
 @bot.event
@@ -64,20 +65,36 @@ async def get(ctx):
         hits, the results will be formatted for easier reading.
 
     """
-    
-    args = ctx.message.content.split(" ")[1:]  # Don't get the !get
 
-    thing = args[0]
-    thing_type = args[1].lower()
-    rank = args[2].lower() if len(args) > 2 else None
+    args = ctx.message.content.split(" ")[1:]  # Don't get the !get
+    len_args = len(args)
+
+    if len_args < 2:
+        bot.say("You need to give the name of the item / set and the item type")
+
+    rank = None
+    skip_args = 1
+    if len_args > 2 and args[-1] in ranks:
+        rank = ranks[args[-1].lower()]
+        skip_args = 2
+
+    thing_type = args[0 - skip_args].lower()
+    if thing_type not in abbrevations and not abbrevations.get(thing_type):
+        await bot.say("What is \"{}\"".format(thing_type))
+        return
+    else:
+        thing_type = abbrevations.get(thing_type) if  thing_type in abbrevations else thing_type
+
+    thing = " ".join(args[:-skip_args]).lower()
+    print(thing, thing_type, rank)
 
     # Get the actual rank parameter
     if rank:
         rank = abbrevations[rank] if rank in abbrevations else rank
 
-    #print("Querying: {} {} with {}".format(thing, thing_type, rank))
     dh = DataHandler.get_handler()
     await dh.get_thing(thing, thing_type, rank)
+
 
 @bot.command(pass_context=True)
 async def pepperoni(ctx):
