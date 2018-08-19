@@ -14,102 +14,63 @@ import os
 import discord
 from discord.ext import commands
 
-import Weblib
+from DataHandler import DataHandler
 
 Client = discord.Client()
 bot = commands.Bot(command_prefix="!",
                    description="Monster Hunter World database bot")
 
-weblib = Weblib.Weblib()
-
-resources = ["armor", "weapons", "charms"]
+abbrevations = {"gs": "greatsword",
+                "ls": "longsword",
+                "gl": "gunlance",
+                "hbg": "heavy-bowgun",
+                "lbg": "light-bowgun",
+                "l": "lance",
+                "sns": "sword-and-shield",
+                "cb": "charge-blade",
+                "b": "bow",
+                "ig": "insect-glaive",
+                "h": "hammer",
+                "db": "dual-blades",
+                "hh": "hunting-horn",
+                "sa": "switch-axe",
+                "set": "set",
+                "low-rank": "lr",
+                "high-rank": "hr"}
 
 
 @bot.event
 async def on_ready():
-    print("Bot ready!")
+    print("Bot up & ready!")
 
 
 @bot.command(pass_context=True)
-async def on_message(msg: discord.message):
+async def get(ctx):
     """
     Tries to fetch the queried item(s) from the database.
+    Input format:
+        args[1]: item or set name
+        args[2]: item type or "set"
+        args[3]: lr / hr (optional)
 
     Args:
-        msg (Message): Discord message object.
+        ctx (discord.Context): Discord Context object.
     
     Returns:
         String / JSON containing the query results. If the query found any
         hits, the results will be formatted for easier reading.
 
     """
-    pass
+    
+    args = ctx.message.content.split(" ")[1:]  # Don't get the !get
+    await bot.say("Args given: {}".format(args))
+    print("this should still run")
 
 
 @bot.command(pass_context=True)
 async def pepperoni(ctx):
     user = ctx.message.author
     await bot.say("Rip in pepperoni {}".format(user.mention))
-
-
-def should_get_data(res_path: str):
-    """
-    Looks up if all the necessary resource files are already saved to the 
-    directory.
-
-    Args:
-        res_path (str): Path to the resources folder.
-
-    Returns:
-        Boolean value indicating whether the data should be fetched or not
-
-    """
-    
-    for r in resources:
-        res = os.path.join(res_path, r)
-        if not os.path.exists("{}.json".format(res)):
-            return True
-        print("No need to fetch {}".format(r))
-    
-    return False
-
-def get_resource(resource: str):
-    """
-    Fetches the given resource and saves it to the "resources" directory.
-
-    Args:
-        resource (str): name of the resource to be getten.
-
-    Returns:
-        Nothing
-
-    """
-
-    res_json = weblib.get(resource)
-    save_path = os.path.join("palico-bot", "resources", resource)
-
-    with open("{}.json".format(save_path), "w") as res_file:
-        json.dump(res_json, res_file, indent=4)
-
-
-def get_database(config: dict):
-    """
-    Fetches the MHW database over REST API and saves it locally for easier
-    access.
-
-    Args:
-        config (dict): Loaded in config file in JSON format.
-
-    Returns:
-        Nothing
-
-    """
-
-    if should_get_data(config.get("resource_path")):
-        for r in resources:
-            get_resource(r)
-
-    return
 
 
 def load_config():
@@ -134,6 +95,7 @@ def init_dirs(config):
 
     Returns:
         Nothing
+
     """
 
     res_path = os.path.join(config.get("resource_path", None))
@@ -149,10 +111,15 @@ def init_palico():
 
     Returns:
         Nothing
+
     """
+
     config = load_config()
     init_dirs(config)
-    get_database(config)
+
+    dh = DataHandler(config["resource_path"])
+    dh.prepare_data()
+
     bot.run(config.get("bot_token", None))
 
 if __name__ == "__main__":
