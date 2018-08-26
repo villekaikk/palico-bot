@@ -17,30 +17,66 @@ from discord.ext import commands
 from DataHandler import DataHandler
 
 Client = discord.Client()
-bot = commands.Bot(command_prefix="!",
+prefix = "!"
+bot = commands.Bot(command_prefix=prefix,
                    description="Monster Hunter World database bot")
 
 
-abbrevations = {"gs": "greatsword",
-                "ls": "longsword",
-                "gl": "gunlance",
-                "hbg": "heavy-bowgun",
-                "lbg": "light-bowgun",
-                "l": "lance",
-                "sns": "sword-and-shield",
-                "cb": "charge-blade",
-                "b": "bow",
-                "ig": "insect-glaive",
-                "h": "hammer",
-                "db": "dual-blades",
-                "hh": "hunting-horn",
-                "sa": "switch-axe",
-                "set": "set"}
+equipment = {"gs": "great-sword",
+             "ls": "long-sword",
+             "gl": "gunlance",
+             "hbg": "heavy-bowgun",
+             "lbg": "light-bowgun",
+             "l": "lance",
+             "sns": "sword-and-shield",
+             "cb": "charge-blade",
+             "b": "bow",
+             "ig": "insect-glaive",
+             "h": "hammer",
+             "db": "dual-blades",
+             "hh": "hunting-horn",
+             "sa": "switch-axe",
+             "set": "set",
+             "waist": "waist",
+             "head": "head",
+             "chest": "chest",
+             "legs": "legs",
+             "gloves":"gloves"}
 
 ranks = {"lr": "low",
          "hr": "high",
          "low-rank": "low",
          "high-rank": "high"}
+
+
+def is_rank(value: str):
+    """
+    Checks whether the input is a rank or not.
+
+    Args:
+        value (str): A value to be checked.
+
+    Returns:
+        Boolean value indicating whether the given value is a rank or not.
+
+    """
+
+    return value in ranks or ranks.get(value) is not None
+
+
+def is_equipment(value):
+    """
+        Checks whether the input is a rank or not.
+
+    Args:
+        value (str): A value to be checked.
+
+    Returns:
+        Boolean value indicating whether the given value is a rank or not.
+
+    """
+
+    return value in equipment or equipment.get(value) is not None
 
 
 @bot.event
@@ -54,7 +90,7 @@ async def get(ctx):
     Tries to fetch the queried item(s) from the database.
     Input format:
         args[0]: item or set name
-        args[1]: item type or "set"
+        args[1]: equipment
         args[2]: lr / hr (optional)
 
     Args:
@@ -70,36 +106,33 @@ async def get(ctx):
     len_args = len(args)
 
     if len_args < 2:
-        bot.say("You need to give the name of the item / set and the item type")
+        bot.say("You need to give the type of the item / set and the item type")
 
     rank = None
     skip_args = 1
-    if len_args > 2 and args[-1] in ranks:
+    # If the last argument is a rank
+    if len_args > 2 and is_rank(args[-1]):
         rank = ranks[args[-1].lower()]
         skip_args = 2
 
     thing_type = args[0 - skip_args].lower()
-    if thing_type not in abbrevations and not abbrevations.get(thing_type):
-        await bot.say("What is \"{}\"".format(thing_type))
+    if not is_equipment(thing_type):
+        await bot.say(
+            "\"{}\" is not a set nor equipment type. Check {}help for info."
+            .format(thing_type, prefix))
         return
     else:
-        thing_type = abbrevations.get(thing_type) if  thing_type in abbrevations else thing_type
+        thing_type = equipment.get(thing_type) if thing_type in equipment else thing_type
 
     thing = " ".join(args[:-skip_args]).lower()
     print(thing, thing_type, rank)
 
     # Get the actual rank parameter
     if rank:
-        rank = abbrevations[rank] if rank in abbrevations else rank
+        rank = ranks[rank] if rank in ranks else rank
 
     dh = DataHandler.get_handler()
     await dh.get_thing(thing, thing_type, rank)
-
-
-@bot.command(pass_context=True)
-async def pepperoni(ctx):
-    user = ctx.message.author
-    await bot.say("Rip in pepperoni {}".format(user.mention))
 
 
 def load_config():
