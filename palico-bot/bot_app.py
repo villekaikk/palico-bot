@@ -106,7 +106,8 @@ async def get(ctx):
     len_args = len(args)
 
     if len_args < 2:
-        bot.say("You need to give the type of the item / set and the item type")
+        await bot.say("You need to give the type of the item / set and the item type")
+        return
 
     rank = None
     skip_args = 1
